@@ -10,14 +10,18 @@ __Description__ = "转换为代码所需的配置文件模板"
 from xml_operation import *
 
 
-class Declaration:
+class BaseDeclaration:
     def get_path(self, node, path_name: str):
         inner_func = path_name.replace('Declaration', '_format').lower()
-        path = eval(f"self.{inner_func}(node={node}, path_name='{path_name}')")
+        param = {"node": node, "path_name": path_name}
+        path = eval(f"self.{inner_func}(**param)")
         return path
 
+    def function_format(self, *args, **kwargs):
+        return ['function ', '/id', '()', '/body']
 
-class Expression:
+
+class BaseExpression:
     def get_path(self, node, path_name: str):
         inner_func = path_name.replace('Expression', '_format').lower()
         param = {"node": node, "path_name": path_name}
@@ -43,13 +47,13 @@ class Expression:
         return ['/expressions']
 
     def unary_format(self, *args, **kwargs):
-        return ['/operator', ' ', '/argument']
+        return ['/operator', '/argument']
 
     def update_format(self, *args, **kwargs):
         return ['/operator', ' ', '/argument']
 
     def function_format(self, *args, **kwargs):
-        return '/body'
+        return ['function()', '/body']
 
     def member_format(self, *args, **kwargs):
         node = kwargs.get('node')
@@ -63,11 +67,15 @@ class Expression:
         return path
 
 
-class Statement:
+class BaseStatement:
     def get_path(self, node, path_name: str):
         inner_func = path_name.replace('Statement', '_format').lower()
-        path = eval(f"self.{inner_func}(node=node, path_name=path_name)")
+        param = {"node": node, "path_name": path_name}
+        path = eval(f"self.{inner_func}(**param)")
         return path
+
+    def block_format(self, *args, **kwargs):
+        return ['{', '/body', '}']
 
     def if_format(self, *args, **kwargs):
         node = kwargs.get('node')
@@ -83,8 +91,18 @@ class Statement:
         return ['/expression']
 
 
-class Other:
+class BaseOther:
     def get_path(self, node, path_name: str):
-        inner_func = path_name.replace('Other', '_format').lower()
-        path = eval(f"self.{inner_func}(node={node}, path_name='{path_name}')")
+        inner_func = f'{path_name}_format'.lower()
+        param = {"node": node, "path_name": path_name}
+        path = eval(f"self.{inner_func}(**param)")
         return path
+
+    def identifier_format(self, *args, **kwargs):
+        return '/name'
+
+    def literal_format(self, *args, **kwargs):
+        return '/value'
+
+    def numericliteral_format(self, *args, **kwargs):
+        return '/value'

@@ -7,7 +7,7 @@ __Description__ = "转换为代码所需的配置文件模板"
 """
 
 
-from config.format import Expression, Statement, Declaration, Other
+from config.format import BaseExpression, BaseStatement, BaseDeclaration, BaseOther
 
 
 class JsConfig:
@@ -18,17 +18,17 @@ class JsConfig:
         self.other = Other()
 
 
-class Declaration(Declaration):
+class Declaration(BaseDeclaration):
     pass
 
 
-class Expression(Expression):
+class Expression(BaseExpression):
     pass
 
 
-class Statement(Statement):
+class Statement(BaseStatement):
     pass
 
 
-class Other(Other):
+class Other(BaseOther):
     pass

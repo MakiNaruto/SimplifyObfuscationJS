@@ -10,11 +10,21 @@ __Description__ = "js代码 在 ast、json、xml之间的相互转换"
 import re
 import json
 import subprocess
-import pyjsparser
 from typing import Any
 from copy import deepcopy
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
+from xml.dom.minidom import Document
+
+
+def code_convert_xml(code: str, code_type='js'):
+    if code_type in ['js', 'javascript']:
+        code = javascript_to_json(code)
+        xml_tree = json_to_xml(code, code_type)
+    else:
+        # TODO 支持其他语言的转换
+        raise '不支持该类型的转换'
+    return xml_tree
 
 
 def json_to_etree(dict_info: dict):
@@ -38,7 +48,7 @@ def json_to_etree(dict_info: dict):
                         'ExportDefaultDeclaration', 'ExportNamedDeclaration', 'FunctionDeclaration', 'ImportDeclaration', 'VariableDeclaration',
 
                         'Literal', 'Super', 'Identifier', 'ImportSpecifier', 'Program', 'MetaProperty',
-                        'Statement', 'StatementListItem', 'AssignmentPattern', 'BindingPattern'
+                        'Statement', 'StatementListItem', 'AssignmentPattern', 'BindingPattern', 'NumericLiteral'
                     }
 
     root = ET.Element('root')
@@ -106,15 +116,16 @@ def xml_to_json(root) -> dict:
     return all_dict
 
 
-def javascript_to_xml(js_code: str, write_file: str = '', convert_method='nodejs', node_path='') -> tuple[Any, Any]:
+def javascript_to_json(js_code: str, convert_method='nodejs', node_path=None):
     """
     将js代码转换为xml文件
-    @param node_path:
+    @param node_path: node 解释器位置,
     @param convert_method: js转ast的方式, [nodejs | pyjsparser]。
     @param js_code: js代码
-    @param write_file: 生成的xml内容写入到指定的文件中。
     """
     if convert_method == 'nodejs':
+        if not node_path:
+            node_path = '/usr/local/bin/node'
         # ` 符号在转换中会出现异常, 进行替换处理
         js_code = re.sub('`', '#--', js_code)
         js_exec = f"""
@@ -139,15 +150,25 @@ def javascript_to_xml(js_code: str, write_file: str = '', convert_method='nodejs
         ast_json = result.stdout.strip()
         ast_json = json.loads(ast_json)
     else:
+        import pyjsparser
         ast_json = pyjsparser.parse(js_code)
+    return ast_json
 
-    convert_xml_tree = json_to_etree(deepcopy(ast_json))
+
+def json_to_xml(data, file_name=None) -> Document:
+    """
+    将js代码转换为xml文件
+    @param file_name:
+    @param data: node 解释器位置,
+    """
+
+    convert_xml_tree = json_to_etree(deepcopy(data))
     convert_xml_tree = ET.ElementTree(convert_xml_tree)
     xml_string = minidom.parseString(ET.tostring(convert_xml_tree.getroot(), encoding='unicode'))
-    if write_file:
-        with open(write_file, 'w') as fw:
+    if file_name:
+        with open(file_name, 'w') as fw:
             fw.write(xml_string.toprettyxml(indent="  "))
-    return ast_json, xml_string
+    return xml_string
 
 
 def update_json_tree(node, json_node: dict) -> tuple[Any, bool]:

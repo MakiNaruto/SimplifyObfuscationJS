@@ -11,18 +11,17 @@ from collections import deque
 
 from config.js_format import JsConfig
 from xml_operation import (get_single_node_by_path,
-                           get_node_value,
-                           get_node_by_path,
-                           get_children)
+                           get_children,
+                           is_parenthesized)
 
 
 def converter(code_type='js'):
     if code_type.lower() in ['js', 'javascript']:
-        Config = JsConfig
+        config = JsConfig
     else:
         raise Exception('未完成该类型的代码转换')
 
-    class XmlConverter(Config):
+    class XmlConverter(config):
         def __init__(self):
             super().__init__()
 
@@ -39,7 +38,7 @@ def converter(code_type='js'):
                 elif format_type.endswith('Statement'):
                     path = self.statement.get_path(node, format_type)
                 else:
-                    path = self.statement.get_path(node, format_type)
+                    path = self.other.get_path(node, format_type)
 
                 son_nodes = self.expand_expression_with_path(node, path)
             return son_nodes
@@ -56,12 +55,19 @@ def converter(code_type='js'):
             else:
                 expand_nodes = []
                 for node_path in path_template:
+                    # 路径信息均以 / 开头
                     if node_path.startswith('/'):
                         sub_node = get_single_node_by_path(node, f'{node.nodeName}{node_path}')
+                        if node_path == '/expressions':
+                            sub_node = sub_node.childNodes
+                            self.expand_expression_list_format(sub_node, insert_model='mid', fill_str=', ', skip_head=1, skip_tail=1)
+                            expand_nodes.extend(sub_node)
+                            continue
                     else:
                         sub_node = node_path
                     expand_nodes.append(sub_node)
-
+            if is_parenthesized(node):
+                expand_nodes = ['('] + expand_nodes + [')']
             return expand_nodes
 
         def expand_expression_list_format(self, node_list, insert_model, insert_sequence='head',
@@ -77,12 +83,11 @@ def converter(code_type='js'):
             @return: 格式化后的list信息
 
             """
-            assert insert_model in ['head', 'tail'], '非预期的插入模式'
             if insert_model == 'mid':
                 for i in range(len(node_list) - skip_tail, skip_head - 1, -1):
                     node_list.insert(i, fill_str)
-
             elif insert_model == 'template':
+                assert insert_sequence in ['head', 'tail'], '非预期的插入模式'
                 assert template, '传入的自定义格式化信息为空'
                 assert isinstance(template, list), '数据格式非期待的list类型'
                 assert len(template) <= (len(node_list) + 1 - skip_head - skip_tail), '插入模板长度超出范围或移动头尾导致无法插入'
@@ -98,40 +103,31 @@ def converter(code_type='js'):
                     node_list_index -= 1
             return node_list
 
-        def single_node_convert_code(self, node):
-            if not node:
-                return ''
-            if isinstance(node, str):
-                return node
-            # if node.nodeName in ['left', 'right', 'object', 'property', 'argument']:
-            leaf_type_nodes = get_node_by_path(node, f'{node.nodeName}/type')
-            if len(leaf_type_nodes) == 1:
-                type_node = leaf_type_nodes[0]
-                type_text_node = get_single_node_by_path(type_node, f'{type_node.nodeName}/#text', return_value=True)
-                if type_text_node == 'Identifier':
-                    leaf = get_single_node_by_path(node, f'{node.nodeName}/name/#text', return_value=True)
-                    return leaf
-                if type_text_node in ['Literal', 'NumericLiteral']:
-                    leaf = get_single_node_by_path(node, f'{node.nodeName}/value/#text', return_value=True)
-                    return leaf
-            elif len(node.childNodes) == 1:
-                leaf_node = node.childNodes[0]
-                return get_node_value(leaf_node)
-
         def tree_node_convert_code(self, node):
             task_queue = deque([node])
             code = ""
 
             while task_queue:
                 node = task_queue.popleft()
-                if not node:
+                if not isinstance(node, str):
+                    # 若节点为叶子节点, 取其内容值
+                    res = get_single_node_by_path(node, f'{node.nodeName}/#text', return_value=True)
+                    node_value = res if res else ''
+                else:
+                    # 调整格式后, 取叶子节点的值
+                    node_value = node
+
+                if node_value:
+                    code += node_value
                     continue
-                res = self.single_node_convert_code(node)
-                if not res:
-                    children = self.format_node(node)
+
+                children = self.format_node(node)
+                if isinstance(children, list):
                     children.reverse()
                     task_queue.extendleft(children)
                 else:
-                    code += res
+                    task_queue.appendleft(children)
+
             return code
+
     return XmlConverter()

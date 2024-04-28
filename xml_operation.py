@@ -65,6 +65,11 @@ def get_node_value(node: Element) -> str:
         return node.nodeValue
 
 
+def is_leaf(node: Element) -> bool:
+    res = get_single_node_by_path(node, f'{node.nodeName}/#text', return_value=True)
+    return True if res else False
+
+
 def is_parenthesized(node: Element) -> bool:
     res = get_single_node_by_path(node, f'{node.nodeName}/extra/parenthesized/#text', return_value=True)
     return True if res == 'True' else False

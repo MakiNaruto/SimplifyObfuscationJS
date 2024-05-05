@@ -48,7 +48,7 @@ class Test(TestCase):
     def test_recover(self):
         """ 代码转换为树结构后, 还原回代码形式的完整性测试 """
         conv = converter()
-        javascript_code_list = ['void (13 == St)', '!function() {a,b,c}', 'function e() {a,b,c}']
+        javascript_code_list = ['void (13 == St)', '!function() {a,b,c}', 'function e() {a,b,c}', '!function() {a;b;c;!function() {d;e;f}}']
         for javascript_code in javascript_code_list:
             _, _, xml_tree = code_converter(javascript_code)
             root = xml_tree.documentElement

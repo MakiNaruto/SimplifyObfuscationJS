@@ -10,6 +10,7 @@ from copy import deepcopy
 from collections import deque
 from xml.dom.minidom import Element
 from typing import List, Set, Union
+from xml.dom.minidom import Document
 
 
 def get_node_by_path(node: Element, path: str) -> List[Element]:
@@ -178,3 +179,69 @@ def assignment_conditional_convert(root: Element):
             sub_task = search_node_by_attribute(ae_node, search_list=['AssignmentExpression'], attribute_name='function_type')
             if sub_task:
                 task_queue.extend(sub_task)
+
+
+def expand_expression_list_format(node_list: List[Union[Element, str]],
+                                  insert_model: str,
+                                  insert_sequence: str = 'head',
+                                  local_operation=False,
+                                  template: List[str] = None,
+                                  fill_info: Union[Element, str] = None,
+                                  skip_head=1,
+                                  skip_tail=1):
+    """
+    @param local_operation:
+    @param node_list: 要进行格式化整理的节点列表
+    @param insert_model: 格式化模式: mid | template
+    @param insert_sequence: 插入方式, 从头向尾插入还是从尾向头插入: head | tail
+    @param fill_info: 处于 mid_insert 格式化模式下的填充类型
+    @param template: 按照模板格式进行填充
+    @param skip_head: 跳过开头n个元素插入
+    @param skip_tail: 跳过结尾n个元素插入
+    @return: 格式化后的list信息
+
+    """
+    if not local_operation:
+        node_list = deepcopy(node_list)
+    if not fill_info:
+        fill_info = ''
+    if insert_model == 'mid':
+        for i in range(len(node_list) - skip_tail, skip_head - 1, -1):
+            node_list.insert(i, fill_info)
+    elif insert_model == 'template':
+        assert insert_sequence in ['head', 'tail'], '非预期的插入模式'
+        assert template, '传入的自定义格式化信息为空'
+        assert isinstance(template, list), '数据格式非期待的list类型'
+        assert len(template) <= (len(node_list) + 1 - skip_head - skip_tail), '插入模板长度超出范围或移动头尾导致无法插入'
+        assert insert_model in ['head', 'tail'], '非预期的插入模式'
+        node_list_index = len(node_list)
+        template_index = 1
+        if insert_sequence == 'head':
+            skip_tail = len(node_list) - skip_head - len(template) + 1
+
+        while template_index <= len(template) and node_list_index >= 0:
+            node_list.insert(node_list_index - skip_tail, template[-template_index])
+            template_index += 1
+            node_list_index -= 1
+    return node_list
+
+
+def extract_unary_operator_node(root: Element):
+    task_queue = search_node_by_attribute(root, search_list=['FunctionExpression'], attribute_name='function_type')
+    while task_queue:
+        function_node = task_queue.pop()
+        unary_node = function_node.parentNode
+        unary_parent_node = unary_node.parentNode.parentNode
+        if unary_node.getAttribute('function_type') == 'UnaryExpression':
+            children = get_single_node_by_path(function_node, f'{function_node.nodeName}/body/body').childNodes
+            for index, child in enumerate(children):
+                unary_parent_node.appendChild(child.cloneNode(deep=True))
+                text_node = Element('Literal')
+                text_node.appendChild(Document().createTextNode(data=";"))
+                if index < len(children) - 1:
+                    unary_parent_node.appendChild(text_node)
+        unary_parent_node.removeChild(unary_node.parentNode)
+
+        sub_task = search_node_by_attribute(root, search_list=['FunctionExpression'], attribute_name='function_type')
+        if sub_task:
+            task_queue.extend(sub_task)

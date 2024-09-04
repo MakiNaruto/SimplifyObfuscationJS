@@ -53,17 +53,46 @@ class BaseExpression(NodeGetter):
     def array_format(self, *args, **kwargs):
         return True, ['[', '/elements', ']']
 
+    def arrowfunction_format(self, *args, **kwargs):
+        return True, ['/params', '=>', '/body']
+
     def assignment_format(self, *args, **kwargs):
         return True, ['/left', ' ', '/operator', ' ', '/right']
 
     def binary_format(self, *args, **kwargs):
         return True, ['/left', ' ', '/operator', ' ', '/right']
 
-    def logical_format(self, *args, **kwargs):
-        return True, ['/left', ' ', '/operator', ' ', '/right']
+    def call_format(self, *args, **kwargs):
+        return True, ['/callee', '(', '/arguments', ')']
+
+    def class_format(self, *args, **kwargs):
+        return True, ['class', '/id', '{', '/body', '}']
 
     def conditional_format(self, *args, **kwargs):
         return True, ['/test', ' ? ', '/consequent', ' : ', '/alternate']
+
+    def function_format(self, *args, **kwargs):
+        return True, ['function()', '/body']
+
+    def logical_format(self, *args, **kwargs):
+        return True, ['/left', ' ', '/operator', ' ', '/right']
+
+    def member_format(self, *args, **kwargs):
+        node: Element = kwargs.get('node')
+        condition_path = '/computed/#text'
+        condition = 'str({}) == "True"'
+        node_condition_value = get_single_node_by_path(node, f'{node.nodeName}{condition_path}', return_value=True)
+        if eval(condition.format(node_condition_value)):
+            path = ['/object', '[', '/property', ']']
+        else:
+            path = ['/object', '.', '/property']
+        return True, path
+
+    def new_format(self, *args, **kwargs):
+        return True, ['new ', '/callee', '(', '/arguments', ')']
+
+    def object_format(self, *args, **kwargs):
+        return True, ['/properties']
 
     def sequence_format(self, *args, **kwargs):
         # 获取转换模板格式
@@ -77,25 +106,20 @@ class BaseExpression(NodeGetter):
                 return False, format_children
         return True, ['/expressions']
 
+    def tagged_template_format(self, *args, **kwargs):
+        return True, ['/tag', '`', '/quasi', '`']
+
+    def this_format(self, *args, **kwargs):
+        return True, ['this']
+
     def unary_format(self, *args, **kwargs):
         return True, ['/operator', '/argument']
 
     def update_format(self, *args, **kwargs):
         return True, ['/operator', ' ', '/argument']
 
-    def function_format(self, *args, **kwargs):
-        return True, ['function()', '/body']
-
-    def member_format(self, *args, **kwargs):
-        node: Element = kwargs.get('node')
-        condition_path = '/computed/#text'
-        condition = 'str({}) == "True"'
-        node_condition_value = get_single_node_by_path(node, f'{node.nodeName}{condition_path}', return_value=True)
-        if eval(condition.format(node_condition_value)):
-            path = ['/object', '[', '/property', ']']
-        else:
-            path = ['/object', '.', '/property']
-        return True, path
+    def yield_format(self, *args, **kwargs):
+        return True, ['yield', ' ', '/argument']
 
 
 class BaseStatement(NodeGetter):
@@ -111,6 +135,30 @@ class BaseStatement(NodeGetter):
                 return False, format_children
         return True, ['{', '/body', '}']
 
+    def break_format(self, *args, **kwargs):
+        return True, ['break']
+
+    def continue_format(self, *args, **kwargs):
+        return True, ['continue']
+
+    def debugger_format(self, *args, **kwargs):
+        return True, ['debugger']
+
+    def dowhile_format(self, *args, **kwargs):
+        return True, ['do {', '/body', '} while(', '/test', ')']
+
+    def expression_format(self, *args, **kwargs):
+        return True, ['/expression']
+
+    def forin_format(self, *args, **kwargs):
+        return True, ['for (', '/left', ' in ', '/right', ')', '{', '/body', '}']
+
+    def forof_format(self, *args, **kwargs):
+        return True, ['for (', '/left', ' in ', '/right', ')', '{', '/body', '}']
+
+    def for_format(self, *args, **kwargs):
+        return True, ['for (', '/init', ';', '/test', ';', '/update', ')', '{', '/body', '}']
+
     def if_format(self, *args, **kwargs):
         node: Element = kwargs.get('node')
         condition_path = '/alternate'
@@ -121,11 +169,26 @@ class BaseStatement(NodeGetter):
             path = ['if(', '/test', '){', '/consequent', '}', 'else{', '/alternate', '}']
         return True, path
 
-    def expression_format(self, *args, **kwargs):
-        return True, ['/expression']
+    def labeled_format(self, *args, **kwargs):
+        return True, ['label', ': ', '/body']
+
+    def return_format(self, *args, **kwargs):
+        return True, ['return ', '/argument']
+
+    def switch_format(self, *args, **kwargs):
+        return True, ['switch(', '/discriminant', ')', '{', '/cases', '}']
+
+    def throw_format(self, *args, **kwargs):
+        return True, ['throw  ', '/argument']
+
+    def try_format(self, *args, **kwargs):
+        return True, ['try ', '/block ', '/handler']
 
 
 class BaseOther(NodeGetter):
+    def classbody_format(self, *args, **kwargs):
+        return True, ['/body']
+
     def identifier_format(self, *args, **kwargs):
         return True, ['/name']
 
@@ -134,3 +197,18 @@ class BaseOther(NodeGetter):
 
     def numericliteral_format(self, *args, **kwargs):
         return True, ['/value']
+
+    def property_format(self, *args, **kwargs):
+        return True, ['/key', ':', '/value']
+
+    def templateliteral_format(self, *args, **kwargs):
+        return True, ['/expression', '/quasis']
+
+    def switchcase_format(self, *args, **kwargs):
+        return True, ['case: ', '/test', '/consequent']
+
+    def stringliteral_format(self, *args, **kwargs):
+        return True, ['/value']
+
+    def catchclause_format(self, *args, **kwargs):
+        return True, ['catch(', '/param', ')', '/body']

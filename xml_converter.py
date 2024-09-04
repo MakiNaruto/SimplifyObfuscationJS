@@ -28,6 +28,13 @@ def converter(code_type='js'):
             format_type = node.getAttribute('function_type')
             if node_type == 'list':
                 son_nodes = get_children(node)
+                if node.nodeName == 'params':
+                    new_son_nodes = []
+                    for index, son_node in enumerate(son_nodes):
+                        new_son_nodes.append(son_node)
+                        if index < len(son_nodes) - 1:
+                            new_son_nodes.append(',')
+                    son_nodes = ['('] + new_son_nodes + [')']
             else:
                 if format_type.endswith('Declaration'):
                     parser = self.declaration

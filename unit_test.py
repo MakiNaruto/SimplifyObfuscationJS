@@ -48,13 +48,72 @@ class Test(TestCase):
     def test_recover(self):
         """ 代码转换为树结构后, 还原回代码形式的完整性测试 """
         conv = converter()
-        javascript_code_list = ['void (13 == St)', '!function() {a,b,c}', 'function e() {a,b,c}', '!function() {a;b;c;!function() {d;e;f}}']
+        javascript_code_list = [
+                                # pass
+                                '(a, b) => { return c + d }',
+                                'void (13 == St)',
+                                '!function() {a,b,c}',
+                                'function e() {a,b,c}',
+                                '!function() {a;b;c;!function() {d;e;f}}',
+                                'Math.floor(12.34 * 2.12)',
+
+                                # TODO not yet
+                                # 'new Cls();',
+                                # 'loop1: a=1',
+                                # 'var foo = { a: 1, s:1, d:2};',
+                                # '''
+                                # for (let x in person) {
+                                #   text += person[x] + " ";
+                                # }
+                                # ''',
+                                # '''
+                                # for (variable of iterable) {
+                                #   statement
+                                # }
+                                # ''',
+                                # '''
+                                # for (var i = 0; i < 9; i++) {
+                                #    console.log(i);
+                                #    // more statements
+                                # }
+                                # ''',
+                                # '''
+                                # switch(fruits) {
+                                #   case "Banana":
+                                #     text = "Banana is good!";
+                                #     break;
+                                #   case "Orange":
+                                #     text = "I am not a fan of orange.";
+                                #     break;
+                                #   case "Apple":
+                                #     text = "How you like them apples?";
+                                #     break;
+                                #   default:
+                                #     text = "I have never heard of that fruit...";
+                                # }
+                                # ''',
+                                # '''
+                                #   try {
+                                #     if(x == "") throw "is Empty";
+                                #     if(isNaN(x)) throw "not a number";
+                                #     if(x > 10) throw "too high";
+                                #     if(x < 5) throw "too low";
+                                #   }
+                                #   catch(err) {
+                                #     message.innerHTML = "Input " + err;
+                                #   }
+                                #   '''
+        ]
         for javascript_code in javascript_code_list:
             _, _, xml_tree = code_converter(javascript_code)
             root = xml_tree.documentElement
             all_nodes = get_single_node_by_path(root, f'{root.nodeName}/program/body').childNodes
             for node in all_nodes:
                 conv_res = conv.tree_node_convert_code(node)
+                ori = javascript_code.replace(' ', '')
+                new = conv_res.replace(' ', '')
+                if ori != new:
+                    print(f'\nori: {ori} \nnew: {new}')
                 self.assertEqual(conv_res.replace(' ', ''), javascript_code.replace(' ', ''))
 
 
